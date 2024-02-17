@@ -1,0 +1,10 @@
+name: IrisLands
+version: '${project.version}'
+main: de.crazydev22.irislands.IrisLands
+api-version: '1.20'
+load: STARTUP
+author: CrazyDev22
+depend: [Iris, Lands, FastAsyncWorldEdit]
+
+libraries:
+  - org.lz4:lz4-java:1.8.0
