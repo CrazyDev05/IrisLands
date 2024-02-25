@@ -13,8 +13,8 @@ import com.volmit.iris.core.tools.IrisToolbelt;
 import com.volmit.iris.engine.data.cache.Cache;
 import com.volmit.iris.util.documentation.ChunkCoordinates;
 import com.volmit.iris.util.mantle.Mantle;
-import me.angeschossen.lands.api.events.ChunkDeleteEvent;
-import me.angeschossen.lands.api.events.ChunkPostClaimEvent;
+import me.angeschossen.wildregeneration.api.WildRegenerationAPI;
+import me.angeschossen.wildregeneration.api.events.chunk.ChunkRegenerateEvent;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.bukkit.Chunk;
@@ -61,13 +61,10 @@ public final class IrisLands extends JavaPlugin implements Listener {
 	}
 
 	@EventHandler
-	public void onPostClaim(ChunkPostClaimEvent event) {
-		save(event.getWorld().getWorld(), event.getX(), event.getZ(), false);
-	}
-
-	@EventHandler
-	public void onChunkDelete(ChunkDeleteEvent event) {
-		load(event.getWorld(), event.getX(), event.getZ(), false);
+	public void onChunkRegenerate(ChunkRegenerateEvent event) {
+		var chunk = event.getChunk();
+		event.setCancelled(true);
+		load(chunk.getWorld().getWorld(), chunk.getX(), chunk.getZ(), false);
 	}
 
 	@ChunkCoordinates
