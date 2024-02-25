@@ -113,6 +113,8 @@ public final class IrisLands extends JavaPlugin implements Listener {
 
 	@ChunkCoordinates
 	public void save(World world, int x, int z, boolean overwrite) {
+		if (getFile(world, false, x, z).exists() && getFile(world, true, x, z).exists() && !overwrite)
+			return;
 		Chunk chunk = world.getChunkAt(x, z);
 		submit(chunk, () -> {
 			chunk.addPluginChunkTicket(this);
