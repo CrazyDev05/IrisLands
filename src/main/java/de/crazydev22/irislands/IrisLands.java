@@ -13,7 +13,6 @@ import com.volmit.iris.core.tools.IrisToolbelt;
 import com.volmit.iris.engine.data.cache.Cache;
 import com.volmit.iris.util.documentation.ChunkCoordinates;
 import com.volmit.iris.util.mantle.Mantle;
-import me.angeschossen.wildregeneration.api.WildRegenerationAPI;
 import me.angeschossen.wildregeneration.api.events.chunk.ChunkRegenerateEvent;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
