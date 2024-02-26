@@ -16,6 +16,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <paper-api>1.20.4-R0.1-SNAPSHOT</paper-api>
+        <lombok>1.18.30</lombok>
         <lz4-java>1.8.0</lz4-java>
         <Iris>3.2.0-1.19.2-1.20.4</Iris>
         <WildRegenerationAPI>1.5.0</WildRegenerationAPI>
@@ -26,6 +27,12 @@
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>${paper-api}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

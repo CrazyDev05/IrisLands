@@ -6,7 +6,6 @@ import com.volmit.iris.util.mantle.Mantle;
 import com.volmit.iris.util.mantle.MantleChunk;
 import com.volmit.iris.util.mantle.TectonicPlate;
 
-import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,32 +22,6 @@ public class MantleWrapper {
 
 		chunks = TectonicPlate.class.getDeclaredField("chunks");
 		chunks.setAccessible(true);
-	}
-
-	public MantleChunk read(Mantle mantle, InputStream in) {
-		try {
-			return new MantleChunk(mantle.getWorldHeight() >> 4, new DataInputStream(in));
-		} catch (IOException | ClassNotFoundException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public void write(MantleChunk chunk, OutputStream out) {
-		try {
-			chunk.write(new DataOutputStream(out));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	@ChunkCoordinates
-	public MantleChunk getChunk(Mantle mantle, int x, int z) {
-		try {
-			return ((TectonicPlate) getPlate.invoke(mantle, x >> 5, z >> 5))
-					.getOrCreate(x & 31, z & 31);
-		} catch (IllegalAccessException | InvocationTargetException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@ChunkCoordinates
