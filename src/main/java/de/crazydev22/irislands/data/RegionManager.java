@@ -12,10 +12,7 @@ import org.bukkit.Chunk;
 import org.bukkit.World;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -52,6 +49,18 @@ public class RegionManager {
 				if (value.getLastUse() < maxLastUse)
 					toUnload.add(key);
 			});
+		} finally {
+			unloadLock.unlock();
+			ioTrim.set(false);
+		}
+	}
+
+	public void unload() {
+		ioTrim.set(true);
+		unloadLock.lock();
+		try {
+			//TODO add unload
+			toUnload.clear();
 		} finally {
 			unloadLock.unlock();
 			ioTrim.set(false);
