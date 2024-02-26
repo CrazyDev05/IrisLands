@@ -36,7 +36,7 @@ import java.util.logging.Level;
 
 public final class IrisLands extends JavaPlugin implements Listener {
 	private final ExecutorService service = new ForkJoinPool();
-	private final Map<Long, Future<?>> futures = new HashMap<>();
+	private final Map<Long, Holder> tasks = new HashMap<>();
 	private MantleWrapper wrapper;
 
 	@Override
@@ -108,7 +108,7 @@ public final class IrisLands extends JavaPlugin implements Listener {
 			} finally {
 				chunk.removePluginChunkTicket(this);
 			}
-		});
+		}, false);
 	}
 
 	@ChunkCoordinates
@@ -140,7 +140,7 @@ public final class IrisLands extends JavaPlugin implements Listener {
 						try (var clipboard = new BlockArrayClipboard(region)) {
 							var copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
 							Operations.complete(copy);
-							clipboard.save(out, BuiltInClipboardFormat.FAST);
+							BuiltInClipboardFormat.FAST.getWriter(out).write(clipboard);
 						}
 					} catch (Throwable e) {
 						getLogger().log(Level.SEVERE, "Failed to save world chunk: " + x + ", " + z, e);
@@ -149,21 +149,23 @@ public final class IrisLands extends JavaPlugin implements Listener {
 			} finally {
 				chunk.removePluginChunkTicket(this);
 			}
-		});
+		}, true);
 	}
 
-	private void submit(Chunk chunk, Runnable runnable) {
+	private void submit(Chunk chunk, Runnable runnable, boolean save) {
 		long chunkId = Cache.key(chunk);
-		var future = futures.remove(chunkId);
-		if (future != null) {
+		var task = tasks.get(chunkId);
+		if (task != null) {
+			if (task.save == save)
+				return;
 			try {
-				future.get();
+				task.future.get();
 			} catch (InterruptedException | ExecutionException e) {
-                getLogger().log(Level.WARNING, "Failed chunk action on chunk " + chunk, e);
+                getLogger().log(Level.WARNING, "Failed chunk action on chunk " + chunk.getX() + ", " + chunk.getZ(), e);
 			}
 		}
-		future = service.submit(runnable);
-		futures.put(chunkId, future);
+		task = new Holder(service.submit(runnable), save);
+		tasks.put(chunkId, task);
 	}
 
 	@ChunkCoordinates
@@ -182,4 +184,6 @@ public final class IrisLands extends JavaPlugin implements Listener {
 		var engine = platform.getEngine();
 		return engine != null ? engine.getMantle().getMantle() : null;
 	}
+
+	private record Holder(Future<?> future, boolean save) {}
 }
