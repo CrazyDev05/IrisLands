@@ -90,7 +90,6 @@ public final class IrisLands extends JavaPlugin implements Listener {
 	@Override
 	public void onDisable() {
 		closed.set(true);
-		service.shutdown();
 		if (trimThread != null) {
 			try {
 				trimThread.await();
@@ -112,6 +111,7 @@ public final class IrisLands extends JavaPlugin implements Listener {
 			managers.clear();
 			managerLock.unlock();
 		}
+		service.shutdown();
 	}
 
 	@EventHandler
