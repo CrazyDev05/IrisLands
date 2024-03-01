@@ -191,7 +191,7 @@ public final class IrisLands extends JavaPlugin implements Listener {
 			}
 			sender.sendMessage("Loading chunk...");
 			getManager(chunk).thenAccept(manager ->
-					manager.load(chunk, args.length == 4 || Boolean.parseBoolean(args[4]))
+					manager.load(chunk, args.length != 4 && Boolean.parseBoolean(args[4]))
 							.thenAccept(changed -> {
 								if (changed) sender.sendMessage("Loaded chunk!");
 								else sender.sendMessage("Chunk already loaded!");
@@ -204,7 +204,7 @@ public final class IrisLands extends JavaPlugin implements Listener {
 			}
 			sender.sendMessage("Saving chunk...");
 			getManager(chunk).thenAccept(manager ->
-							manager.save(chunk, args.length != 4 && Boolean.parseBoolean(args[4]))
+							manager.save(chunk, args.length == 4 || Boolean.parseBoolean(args[4]))
 									.thenAccept(changed -> {
 										if (changed) sender.sendMessage("Saved chunk!");
 										else sender.sendMessage("Chunk already saved!");

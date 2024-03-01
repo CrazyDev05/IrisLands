@@ -7,7 +7,9 @@ import com.volmit.iris.util.mantle.Mantle;
 import com.volmit.iris.util.parallel.HyperLock;
 import de.crazydev22.irislands.IrisLands;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NonNull;
+import lombok.ToString;
 import org.bukkit.Chunk;
 import org.bukkit.World;
 
@@ -30,6 +32,8 @@ public class RegionManager {
 	private final AtomicBoolean closed = new AtomicBoolean();
 	private final HyperLock hyperLock = new HyperLock();
 
+	@ToString.Exclude
+	@EqualsAndHashCode.Exclude
 	private final IrisLands plugin;
 	private final Mantle mantle;
 	private final File dataFolder;
@@ -173,7 +177,7 @@ public class RegionManager {
 	public File getFile(int x, int z) {
 		File file = new File(dataFolder, File.separator + x + "_" + z + ".lz4b");
 		if (!file.getParentFile().exists() && !file.getParentFile().mkdirs())
-			throw new RuntimeException("Failed to create directory: " + file.getParentFile());
+			plugin.getLogger().log(Level.SEVERE, "Failed to create directory: " + file.getParentFile());
 		return file;
 	}
 

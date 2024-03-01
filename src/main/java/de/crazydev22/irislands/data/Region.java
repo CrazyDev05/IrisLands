@@ -15,6 +15,8 @@ import com.volmit.iris.util.mantle.MantleChunk;
 import com.volmit.iris.util.parallel.HyperLock;
 import de.crazydev22.irislands.util.MantleWrapper;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.bukkit.Chunk;
@@ -29,6 +31,8 @@ import java.util.logging.Level;
 public class Region {
 	private final AtomicReferenceArray<MantleChunk> mantleChunks = new AtomicReferenceArray<>(1024);
 	private final AtomicReferenceArray<String> worldChunks = new AtomicReferenceArray<>(1024);
+	@ToString.Exclude
+	@EqualsAndHashCode.Exclude
 	private final RegionManager manager;
 	private final HyperLock hyperLock = new HyperLock();
 	private long lastUse = System.currentTimeMillis();
@@ -73,7 +77,7 @@ public class Region {
 					try (var editSession = WorldEdit.getInstance().newEditSession(new BukkitWorld(chunk.getWorld()))) {
 						var operation = new ClipboardHolder(fromBytes(worldChunk))
 								.createPaste(editSession)
-								.to(BlockVector3.at(x << 4, chunk.getWorld().getMinHeight(), z << 4))
+								.to(BlockVector3.at(chunk.getX() << 4, chunk.getWorld().getMinHeight(), chunk.getZ() << 4))
 								.ignoreAirBlocks(false)
 								.build();
 						Operations.complete(operation);
@@ -111,8 +115,8 @@ public class Region {
 					var world = new BukkitWorld(chunk.getWorld());
 					try (var editSession = WorldEdit.getInstance().newEditSession(world)) {
 						var region = new CuboidRegion(world,
-								BlockVector3.at(x << 4, chunk.getWorld().getMinHeight(), z << 4),
-								BlockVector3.at((x << 4) + 15, chunk.getWorld().getMaxHeight(), (z << 4) + 15));
+								BlockVector3.at(chunk.getX() << 4, chunk.getWorld().getMinHeight(), chunk.getZ() << 4),
+								BlockVector3.at((chunk.getX() << 4) + 15, chunk.getWorld().getMaxHeight(), (chunk.getZ() << 4) + 15));
 						try (var clipboard = new BlockArrayClipboard(region)) {
 							var copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
 							Operations.complete(copy);
