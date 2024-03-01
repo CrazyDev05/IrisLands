@@ -79,6 +79,8 @@ public class Region {
 								.createPaste(editSession)
 								.to(BlockVector3.at(chunk.getX() << 4, chunk.getWorld().getMinHeight(), chunk.getZ() << 4))
 								.ignoreAirBlocks(false)
+								.copyEntities(false)
+								.copyBiomes(false)
 								.build();
 						Operations.complete(operation);
 						if (delete) worldChunks.set(index, null);
@@ -119,6 +121,8 @@ public class Region {
 								BlockVector3.at((chunk.getX() << 4) + 15, chunk.getWorld().getMaxHeight(), (chunk.getZ() << 4) + 15));
 						try (var clipboard = new BlockArrayClipboard(region)) {
 							var copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
+							copy.setCopyingEntities(false);
+							copy.setCopyingBiomes(false);
 							Operations.complete(copy);
 							worldChunks.set(index, toBase64(clipboard));
 							changed.set(true);
