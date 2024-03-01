@@ -212,8 +212,8 @@ public final class IrisLands extends JavaPlugin implements Listener {
 			return true;
 		} else if (args[0].equalsIgnoreCase("clear")) {
 			getManager(world).thenAccept(manager -> {
-				manager.clear();
-				sender.sendMessage("Cleared all regions!");
+				if (manager.clear()) sender.sendMessage("Cleared all regions!");
+				else sender.sendMessage("Nothing to clear!");
 			});
 		}
 		return false;
