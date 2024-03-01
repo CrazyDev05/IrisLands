@@ -48,7 +48,7 @@ public class RegionManager {
 		unloadLock.lock();
 		try {
 			regions.forEach((key, value) -> {
-				if (value.getLastUse() - System.currentTimeMillis() < maxLastUse)
+				if (value.getLastUse() - System.currentTimeMillis() > maxLastUse)
 					toUnload.add(key);
 			});
 		} finally {
