@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -241,12 +242,16 @@ public final class IrisLands extends JavaPlugin implements Listener {
 			case 3 -> List.of(loc != null ? String.valueOf(loc.getChunk().getX()) : "0");
 			case 4 -> List.of(loc != null ? String.valueOf(loc.getChunk().getZ()) : "0");
 			case 5 -> List.of("true", "false");
-			default -> null;
+			default -> empty();
 		};
-		if (list != null) {
+		if (list != empty()) {
 			list = new ArrayList<>(list);
 			list.removeIf(s -> !s.startsWith(args[args.length - 1]));
 		}
 		return list;
+	}
+
+	private static List<String> empty() {
+		return Collections.emptyList();
 	}
 }
