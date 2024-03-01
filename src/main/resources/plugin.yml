@@ -13,6 +13,6 @@ libraries:
 commands:
   irislands:
     permission: irislands.admin
-    usage: '/irislands <load|save> <world> <x> <z> <trim>'
+    usage: '/irislands <load|save|clear> <world> <x> <z> <trim>'
     description: 'IrisLands command'
     aliases: ['il']
