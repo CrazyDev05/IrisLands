@@ -4,7 +4,14 @@ main: de.crazydev22.irislands.IrisLands
 api-version: '1.20'
 load: STARTUP
 author: CrazyDev22
-depend: [Iris, Lands, FastAsyncWorldEdit]
+depend: [Iris, Lands, FastAsyncWorldEdit, WildRegeneration]
 
 libraries:
   - org.lz4:lz4-java:1.8.0
+
+commands:
+  irislands:
+    permission: irislands.admin
+    usage: '/irislands <load|save> <world> <x> <z> <trim>'
+    description: 'IrisLands command'
+    aliases: ['il']

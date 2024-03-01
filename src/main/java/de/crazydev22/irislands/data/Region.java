@@ -13,19 +13,22 @@ import com.sk89q.worldedit.session.ClipboardHolder;
 import com.volmit.iris.engine.data.cache.Cache;
 import com.volmit.iris.util.mantle.MantleChunk;
 import com.volmit.iris.util.parallel.HyperLock;
-import de.crazydev22.irislands.MantleWrapper;
+import de.crazydev22.irislands.util.MantleWrapper;
 import lombok.Data;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.bukkit.Chunk;
 
 import java.io.*;
+import java.util.Base64;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.logging.Level;
 
 @Data
 public class Region {
 	private final AtomicReferenceArray<MantleChunk> mantleChunks = new AtomicReferenceArray<>(1024);
-	private final AtomicReferenceArray<Clipboard> worldChunks = new AtomicReferenceArray<>(1024);
+	private final AtomicReferenceArray<String> worldChunks = new AtomicReferenceArray<>(1024);
 	private final RegionManager manager;
 	private final HyperLock hyperLock = new HyperLock();
 	private long lastUse = System.currentTimeMillis();
@@ -43,16 +46,17 @@ public class Region {
 				if (din.readBoolean() && manager.getMantle() != null)
 					mantleChunks.set(i, new MantleChunk(manager.getMantle().getWorldHeight() >> 4, din));
 				if (din.readBoolean())
-					worldChunks.set(i, BuiltInClipboardFormat.FAST.getReader(din).read());
+					worldChunks.set(i, din.readUTF());
 			}
 		} catch (Throwable e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	public void load(Chunk chunk, boolean delete) {
+	public boolean load(Chunk chunk, boolean delete) {
 		lastUse = System.currentTimeMillis();
 		int index = index(chunk.getX(), chunk.getZ());
+		AtomicBoolean changed = new AtomicBoolean(false);
 		hyperLock.withLong(index, () -> {
 			chunk.addPluginChunkTicket(manager.getPlugin());
 			try {
@@ -61,30 +65,37 @@ public class Region {
 					var mantleChunk = mantleChunks.get(index);
 					getWrapper().setChunk(mantle, chunk.getX(), chunk.getZ(), mantleChunk);
 					if (delete) mantleChunks.set(index, null);
+					changed.set(true);
 				}
 
 				var worldChunk = worldChunks.get(index);
 				if (worldChunk != null) {
 					try (var editSession = WorldEdit.getInstance().newEditSession(new BukkitWorld(chunk.getWorld()))) {
-						var operation = new ClipboardHolder(worldChunk)
+						var operation = new ClipboardHolder(fromBytes(worldChunk))
 								.createPaste(editSession)
 								.to(BlockVector3.at(x << 4, chunk.getWorld().getMinHeight(), z << 4))
 								.ignoreAirBlocks(false)
 								.build();
 						Operations.complete(operation);
 						if (delete) worldChunks.set(index, null);
+						changed.set(true);
 					}
 				}
+			} catch (Throwable e) {
+				manager.getPlugin().getLogger().log(Level.SEVERE, "Failed to load region chunk " + chunk.getX() + ", " + chunk.getZ(), e);
 			} finally {
 				chunk.removePluginChunkTicket(manager.getPlugin());
-				hyperLock.unlock(chunk.getX(), chunk.getZ());
 			}
 		});
+		return changed.get();
 	}
 
-	public void save(Chunk chunk, boolean overwrite) {
+	public boolean save(Chunk chunk, boolean overwrite) {
 		lastUse = System.currentTimeMillis();
 		int index = index(chunk.getX(), chunk.getZ());
+		if (!overwrite && worldChunks.get(index) != null && !worldChunks.get(index).isBlank() && (manager.getMantle() == null || mantleChunks.get(index) != null))
+			return false;
+		AtomicBoolean changed = new AtomicBoolean(false);
 		hyperLock.withLong(index, () -> {
 			chunk.addPluginChunkTicket(manager.getPlugin());
 			try {
@@ -92,10 +103,11 @@ public class Region {
 				if (mantle != null) {
 					if (mantleChunks.get(index) == null || overwrite) {
 						mantleChunks.set(index, mantle.getChunk(chunk.getX(), chunk.getZ()));
+						changed.set(true);
 					}
 				}
 
-				if (worldChunks.get(index) == null || overwrite) {
+				if (worldChunks.get(index) == null || worldChunks.get(index).isBlank() || overwrite) {
 					var world = new BukkitWorld(chunk.getWorld());
 					try (var editSession = WorldEdit.getInstance().newEditSession(world)) {
 						var region = new CuboidRegion(world,
@@ -104,21 +116,25 @@ public class Region {
 						try (var clipboard = new BlockArrayClipboard(region)) {
 							var copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
 							Operations.complete(copy);
+							worldChunks.set(index, toBase64(clipboard));
+							changed.set(true);
 						}
 					}
 				}
+			} catch (Throwable e) {
+				manager.getPlugin().getLogger().log(Level.SEVERE, "Failed to save region chunk " + chunk.getX() + ", " + chunk.getZ(), e);
 			} finally {
 				chunk.removePluginChunkTicket(manager.getPlugin());
-				hyperLock.unlock(chunk.getX(), chunk.getZ());
 			}
 		});
+		return changed.get();
 	}
 
 	private MantleWrapper getWrapper() {
 		return manager.getPlugin().getWrapper();
 	}
 
-	public void save() {
+	public void save() throws IOException {
 		try (var dos = new DataOutputStream(new LZ4BlockOutputStream(new FileOutputStream(manager.getFile(x, z))))) {
 			for (int i = 0; i < 1024; i++) {
 				var mantle = mantleChunks.get(i);
@@ -130,16 +146,27 @@ public class Region {
 				}
 				dos.flush();
 				var world = worldChunks.get(i);
-				if (world != null) {
+				if (world != null && !world.isBlank()) {
 					dos.writeBoolean(true);
-					BuiltInClipboardFormat.FAST.getWriter(dos).write(world);
+					dos.writeUTF(world);
 				} else {
 					dos.writeBoolean(false);
 				}
 				dos.flush();
 			}
-		} catch (IOException e) {
-			throw new RuntimeException(e);
+		}
+	}
+
+	private static String toBase64(Clipboard clipboard) throws IOException {
+		try (var out = new ByteArrayOutputStream()) {
+			clipboard.save(out, BuiltInClipboardFormat.FAST);
+			return Base64.getEncoder().encodeToString(out.toByteArray());
+		}
+	}
+
+	public static Clipboard fromBytes(String base64) throws IOException {
+		try (var in = new ByteArrayInputStream(Base64.getDecoder().decode(base64))) {
+			return BuiltInClipboardFormat.FAST.getReader(in).read();
 		}
 	}
 

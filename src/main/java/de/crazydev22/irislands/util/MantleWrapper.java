@@ -1,4 +1,4 @@
-package de.crazydev22.irislands;
+package de.crazydev22.irislands.util;
 
 import com.volmit.iris.engine.data.cache.Cache;
 import com.volmit.iris.util.documentation.ChunkCoordinates;

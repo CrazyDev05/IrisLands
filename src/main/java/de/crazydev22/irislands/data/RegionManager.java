@@ -12,6 +12,7 @@ import org.bukkit.Chunk;
 import org.bukkit.World;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -20,15 +21,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 
-//TODO add closed flag
-
 @Data
 public class RegionManager {
 	private final Map<@NonNull Long, @NonNull Region> regions = new HashMap<>();
-	private final List<@NonNull Long> toUnload = new ArrayList<>();
+	private final HashSet<@NonNull Long> toUnload = new HashSet<>();
 
 	private final ReentrantLock unloadLock = new ReentrantLock(true);
-	private final AtomicBoolean ioTrim = new AtomicBoolean();
+	private final AtomicBoolean closed = new AtomicBoolean();
 	private final HyperLock hyperLock = new HyperLock();
 
 	private final IrisLands plugin;
@@ -42,53 +41,98 @@ public class RegionManager {
 	}
 
 	public void trim(long maxLastUse) {
-		ioTrim.set(true);
 		unloadLock.lock();
 		try {
 			regions.forEach((key, value) -> {
-				if (value.getLastUse() < maxLastUse)
+				if (value.getLastUse() - System.currentTimeMillis() < maxLastUse)
 					toUnload.add(key);
 			});
 		} finally {
 			unloadLock.unlock();
-			ioTrim.set(false);
 		}
 	}
 
-	public void unload() {
-		ioTrim.set(true);
+	public boolean clear() {
 		unloadLock.lock();
+		boolean result;
 		try {
-			//TODO add unload
+			result = deleteDir(dataFolder);
+			regions.clear();
 			toUnload.clear();
 		} finally {
 			unloadLock.unlock();
-			ioTrim.set(false);
+		}
+		return result;
+	}
+
+	private static boolean deleteDir(File file) {
+		File[] contents = file.listFiles();
+		if (contents != null) {
+			for (File f : contents) {
+				try {
+					if (!Files.isSymbolicLink(f.toPath())) {
+						deleteDir(f);
+					}
+				} catch (Exception ignored) {
+				}
+			}
+		}
+		return file.delete();
+	}
+
+	public void unload() {
+		unloadLock.lock();
+		try {
+			for (Long key : toUnload.toArray(Long[]::new)) {
+				Region region = regions.get(key);
+				try {
+					if (region != null)
+						region.save();
+				} catch (Throwable e) {
+					getPlugin().getLogger().log(Level.SEVERE, "Failed to save region " + key, e);
+				}
+				regions.remove(key);
+				toUnload.remove(key);
+			}
+		} finally {
+			unloadLock.unlock();
 		}
 	}
 
-	public void save(Chunk chunk, boolean overwrite) {
-		plugin.getService().submit(() ->
-				get(chunk.getX() >> 5, chunk.getZ() >> 5)
-						.save(chunk, overwrite));
+	@NonNull
+	public CompletableFuture<@NonNull Boolean> save(Chunk chunk, boolean overwrite) {
+		CompletableFuture<Boolean> future = new CompletableFuture<>();
+		plugin.getService().submit(() -> {
+			future.complete(get(chunk.getX() >> 5, chunk.getZ() >> 5)
+					.save(chunk, overwrite));
+		});
+		return future;
 	}
 
-	public void load(Chunk chunk, boolean delete) {
-		plugin.getService().submit(() ->
-				get(chunk.getX() >> 5, chunk.getZ() >> 5)
-						.load(chunk, delete));
+	@NonNull
+	public CompletableFuture<@NonNull Boolean> load(Chunk chunk, boolean delete) {
+		CompletableFuture<Boolean> future = new CompletableFuture<>();
+		plugin.getService().submit(() -> {
+			future.complete(get(chunk.getX() >> 5, chunk.getZ() >> 5)
+					.load(chunk, delete));
+		});
+		return future;
 	}
 
 	public void close() {
-		for (var region : regions.values()) {
-			region.save();
+		try {
+			trim(0);
+			unload();
+		} finally {
+			closed.set(true);
 		}
-		regions.clear();
 	}
 
 	@RegionCoordinates
 	private Region get(int x, int z) {
-		if (ioTrim.get()) {
+		if (closed.get())
+			throw new IllegalStateException("RegionManager is closed");
+		if (unloadLock.isLocked()) {
 			try {
 				return getSafe(x, z).get();
 			} catch (InterruptedException | ExecutionException e) {
@@ -108,6 +152,7 @@ public class RegionManager {
 		return get(x, z);
 	}
 
+	@RegionCoordinates
 	private Future<Region> getSafe(int x, int z) {
 		long key = Cache.key(x, z);
 		Region r = regions.get(key);
