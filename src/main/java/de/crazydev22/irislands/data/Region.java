@@ -106,7 +106,7 @@ public class Region {
 				var mantle = manager.getMantle();
 				if (mantle != null) {
 					if (mantleChunks.get(index) == null || overwrite) {
-						mantleChunks.set(index, mantle.getChunk(chunk.getX(), chunk.getZ()));
+						mantleChunks.set(index, copy(mantle.getWorldHeight() >> 4, mantle.getChunk(chunk.getX(), chunk.getZ())));
 						changed.set(true);
 					}
 				}
@@ -158,6 +158,19 @@ public class Region {
 				}
 				dos.flush();
 			}
+		}
+	}
+
+	private static MantleChunk copy(int sectionHeight, MantleChunk chunk) throws IOException, ClassNotFoundException {
+		if (chunk == null)
+			return null;
+		byte[] data;
+		try (var bytes = new ByteArrayOutputStream(); var dos = new DataOutputStream(bytes)) {
+			chunk.write(dos);
+			data = bytes.toByteArray();
+		}
+		try (var bytes = new ByteArrayInputStream(data); var din = new DataInputStream(bytes)) {
+			return new MantleChunk(sectionHeight, din);
 		}
 	}
 
