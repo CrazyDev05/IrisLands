@@ -175,7 +175,7 @@ public final class IrisLands extends JavaPlugin implements Listener {
 			sender.sendMessage("You don't have permission to use this command!");
 			return true;
 		}
-		if (args.length < 4)
+		if (args.length < 2 || args.length > 5)
 			return false;
 
 		World world = Bukkit.getWorld(args[1]);
@@ -188,7 +188,7 @@ public final class IrisLands extends JavaPlugin implements Listener {
 		if (args[0].equalsIgnoreCase("load")) {
 			if (chunk == null) {
 				sender.sendMessage("Chunk not found!");
-				return true;
+				return false;
 			}
 			sender.sendMessage("Loading chunk...");
 			getManager(chunk).thenAccept(manager ->
@@ -201,7 +201,7 @@ public final class IrisLands extends JavaPlugin implements Listener {
 		} else if (args[0].equalsIgnoreCase("save")) {
 			if (chunk == null) {
 				sender.sendMessage("Chunk not found!");
-				return true;
+				return false;
 			}
 			sender.sendMessage("Saving chunk...");
 			getManager(chunk).thenAccept(manager ->
