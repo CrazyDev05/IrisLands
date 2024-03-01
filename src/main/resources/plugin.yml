@@ -1,5 +1,6 @@
 name: IrisLands
 version: '${project.version}'
+description: 'Adds compatibility between Iris, Lands and WildRegeneration'
 main: de.crazydev22.irislands.IrisLands
 api-version: '1.20'
 load: STARTUP
